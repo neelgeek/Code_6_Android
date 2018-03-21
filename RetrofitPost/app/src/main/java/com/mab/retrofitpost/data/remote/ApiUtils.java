@@ -6,7 +6,7 @@ package com.mab.retrofitpost.data.remote;
 
 public class ApiUtils {
     private ApiUtils() {};
-    public static final String BASE_URL = "https://code6sihapi.herokuapp.com/truckCompany/truckLogin/";
+    public static final String BASE_URL = "https://code6sihapi.herokuapp.com/truckCompany/";
 
     public static APIService getAPIService() {
         return RetrofitClient.getClient(BASE_URL).create(APIService.class);

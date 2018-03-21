@@ -14,6 +14,25 @@ public class Truck {
     @SerializedName("password")
     @Expose
     private String password;
+    @SerializedName("message")
+    @Expose
+    private String message;
+
+    public String getMessage() {
+        return message;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
+    }
+
+    public Truck() {
+    }
+
+    public Truck(String trucknum, String password) {
+        this.trucknum = trucknum;
+        this.password = password;
+    }
 
     public String getTrucknum() {
         return trucknum;
