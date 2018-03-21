@@ -59,6 +59,7 @@ public class MainActivity extends AppCompatActivity {
                 .baseUrl("https://code6sihapi.herokuapp.com/truckCompany/")
                 .addConverterFactory(GsonConverterFactory.create());
         Retrofit retrofit = builder.build();
+        //http://localhost:8000/
         APIService mAPIService = retrofit.create(APIService.class);
         Call<Truck> call = mAPIService.post(truck);
         call.enqueue(new Callback<Truck>() {
