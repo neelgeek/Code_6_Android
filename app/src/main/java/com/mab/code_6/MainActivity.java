@@ -2,113 +2,141 @@ package com.mab.code_6;
 
 import android.content.Context;
 import android.content.Intent;
-import android.support.design.widget.TabLayout;
-import android.support.v4.view.ViewPager;
+import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.support.v7.widget.Toolbar;
-import android.view.Menu;
-import android.view.MenuItem;
+import android.support.v7.widget.DefaultItemAnimator;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.View;
-import android.widget.AdapterView;
-import static com.mab.code_6.R.menu.main_menu;
-import static com.mab.code_6.R.id.action_add;
+import android.widget.Toast;
 
-public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSelectedListener{
-    //This is our tablayout
-    private TabLayout tabLayout;
+import com.mab.code_6.Service.APIService;
+import com.mab.code_6.models.OrderDetails;
 
-    //This is our viewPager
-    private ViewPager viewPager;
-    static  AdapterView.OnItemClickListener mBuyListener;
-    static  AdapterView.OnItemClickListener mSellListener;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Set;
 
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
+
+public class MainActivity extends AppCompatActivity {
+    private static final String TAG = "hii";
+    Set<String> order_id;
+    private RecyclerView.Adapter adapter;
+    private RecyclerView mOrderList;
+    ArrayList<OrderDetails> orderDetailsList = new ArrayList<>();
+    OrderDetails orderDetails;
+    int i=1;
+    static View.OnClickListener myOnClickListener;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        mOrderList = findViewById(R.id.ordersList);
+        mOrderList.setHasFixedSize(true);
+        mOrderList.setLayoutManager(new LinearLayoutManager(this));
+        mOrderList.setItemAnimator(new DefaultItemAnimator());
+        myOnClickListener = new MyOnClickListener(this);
+        order_id = PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getStringSet("order_id",null);
+        final OrderDetails orderdetails =  new OrderDetails();
+        final Iterator iterator = order_id.iterator();
+            Retrofit.Builder builder = new Retrofit.Builder()
+                    .baseUrl("http://192.168.42.20:8000/truck/")
+                    .addConverterFactory(GsonConverterFactory.create());
+            Retrofit retrofit = builder.build();
+            APIService mAPIService = retrofit.create(APIService.class);
+        while (iterator.hasNext()){
+            String abc = (String) iterator.next();
+            Call<OrderDetails> call  = mAPIService.OrderDetails(abc);
+            call.enqueue(new Callback<OrderDetails>() {
+                @Override
+                public void onResponse(Call<OrderDetails> call, final Response<OrderDetails> response) {
+                    if (response.isSuccessful()) {
+                        populte(response.body(),i,order_id.size());
+                        i++;
+                        //Toast.makeText(MainActivity.this, response.body().getCropDetails().getName()+ "", Toast.LENGTH_SHORT).show();
+                        //Toast.makeText(MainActivity.this, response.code() + "", Toast.LENGTH_SHORT).show();
+                        /*new Handler().postDelayed(new Runnable(){
+                            @Override
+                            public void run() {
 
-            //Adding toolbar to the activity
-            Toolbar toolbar =findViewById(R.id.toolbar  );
-            setSupportActionBar(toolbar);
-            mBuyListener = new BuyOnItemClickListener(this);
-            mSellListener = new SellOnItemClickListener(this);
-            //Initializing the tablayout
-            tabLayout = (TabLayout) findViewById(R.id.tabLayout);
+                                orderdetails.setCropDetails(response.body().getCropDetails());
+                                orderdetails.setTransportAmount(response.body().getTransportAmount());
+                                orderDetailsList.add(orderdetails);
+                                Log.d(TAG,orderdetails.getTransportAmount()+"");
+                            }
+                        }, 1200);*/
+                        /*orderdetails.setFarmerId("5aac1483aaf3a919a4de8251");
+                       orderdetails.setTransportId(response.body().getTransportId());
+                       orderdetails.setStatus( response.body().getStatus());*/
+                                /*response.body().getOrigin()
+                                response.body().getDestination()
+                                response.body().getId()
+                                response.body().getMerchantId()
+                                response.body().getCropDetails()
+                                response.body().getFarmerAmount()
+                                response.body().getMerchantOtp()
+                                response.body().getFarmerOtp()
+                                response.body().getV()*/
+                    }
+                }
 
-            //Adding the tabs using addTab() method
-            tabLayout.addTab(tabLayout.newTab().setText("Farmer"));
-            tabLayout.addTab(tabLayout.newTab().setText("Merchant"));
-            //tabLayout.addTab(tabLayout.newTab().setText("Tab3"));
-            tabLayout.setTabGravity(TabLayout.GRAVITY_FILL);
+                @Override
+                public void onFailure(Call<OrderDetails> call, Throwable t) {
+                    Log.e(TAG, "Unable to submit post to API.");
 
-            //Initializing viewPager
-            viewPager = (ViewPager) findViewById(R.id.pager);
-
-            //Creating our pager adapter
-            Pager adapter = new Pager(getSupportFragmentManager(), tabLayout.getTabCount());
-
-            //Adding adapter to pager
-            viewPager.setAdapter(adapter);
-            viewPager.addOnPageChangeListener(new TabLayout.TabLayoutOnPageChangeListener(tabLayout));
-
-            //Adding onTabSelectedListener to swipe views
-            tabLayout.setOnTabSelectedListener(this);
-
+                }
+            });
         }
-    private class BuyOnItemClickListener implements AdapterView.OnItemClickListener{
+    }
+    private void populte(OrderDetails body, int i, int size){
+        orderDetails = body;
+        orderDetailsList.add(orderDetails);
+        if(i <= size){
+            //Toast.makeText(this,"Hello", Toast.LENGTH_SHORT).show();
+            adapter = new CustomAdapter(orderDetailsList);
+            mOrderList.setAdapter(adapter);
+        }
+        //Toast.makeText(this,size+ "", Toast.LENGTH_SHORT).show();
+
+    }
+    private class MyOnClickListener implements View.OnClickListener {
         private final Context context;
 
-        private BuyOnItemClickListener(Context context) {
+        private MyOnClickListener(Context context) {
             this.context = context;
         }
+
         @Override
-        public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-            Intent intent = new Intent(MainActivity.this,BuyerDetail.class);
+        public void onClick(View v) {
+            int pos = (int) v.getTag();
+            String Farmer_id = orderDetailsList.get(pos).getFarmerId();
+            String Farmer_otp = orderDetailsList.get(pos).getFarmerOtp();
+            String Merchant_id = orderDetailsList.get(pos).getMerchantId();
+            String Merchant_otp = orderDetailsList.get(pos).getMerchantOtp();
+            String Origin = orderDetailsList.get(pos).getOrigin();
+            String Destination = orderDetailsList.get(pos).getDestination();
+            /*Bundle bundle = new Bundle();
+            bundle.putString("FarmerId", Farmer_id);
+            bundle.putString("MerchantId",Merchant_id);
+            bundle.putString("FarmerOtp",Farmer_otp);
+            bundle.putString("MerchantOtp",Merchant_otp);
+            bundle.putString("Origin",Origin);
+            bundle.putString("Destination",Destination);*/
+            Intent intent = new Intent(MainActivity.this,TabActivity.class);
+            //intent.putExtras(bundle);
             startActivity(intent);
+            /* Tab1 tab1 = new Tab1();
+             tab1.setArguments(bundle);
+             Tab2 tab2 = new Tab2();
+             tab2.setArguments(bundle);*/
+             //startActivity(new Intent(MainActivity.this,Tab1.class));
         }
-    }
-    private class SellOnItemClickListener implements AdapterView.OnItemClickListener{
-        private final Context context;
-
-        private SellOnItemClickListener(Context context) {
-            this.context = context;
-        }
-        @Override
-        public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-            Intent intent = new Intent(MainActivity.this,SellerDetail.class);
-            startActivity(intent);
-        }
-    }
-    @Override
-    public void onTabSelected(TabLayout.Tab tab) {
-            viewPager.setCurrentItem(tab.getPosition());
-    }
-
-    @Override
-    public void onTabUnselected(TabLayout.Tab tab) {
-
-    }
-
-    @Override
-    public void onTabReselected(TabLayout.Tab tab) {
-
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(main_menu,menu);
-        menu.findItem(R.id.action_add).setVisible(true);
-        return super.onCreateOptionsMenu(menu);
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        if(item.getItemId() == action_add){
-           Intent intent =  new Intent(MainActivity.this,Splash.class);
-           intent.putExtra("Priority",0);
-           startActivity(intent);
-        }
-        return super.onOptionsItemSelected(item);
     }
 }
